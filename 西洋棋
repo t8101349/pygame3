@@ -1,0 +1,271 @@
+# 創建一個8x8的棋盤
+def create_board():
+    # 初始化棋盤，"." 表示空白的格子
+    board = [["." for _ in range(8)] for _ in range(8)]
+
+    # 放置黑色棋子
+    board[0] = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r']
+    board[1] = ['p' for _ in range(8)]
+    
+    # 放置白色棋子
+    board[6] = ['P' for _ in range(8)]
+    board[7] = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    return board
+
+# 打印棋盤的函數
+def print_board(board):
+    for row in board:
+        print(" ".join(row))
+    print()
+
+#將棋盤上的字母數字表示（如 e2）轉換為索引（如 [6, 4]）
+def position_to_index(pos):
+    column = ord(pos[0])-ord("a")
+    row = 8-int(pos[1])
+    return row,column
+
+def is_valid_pawn_move(board, start_row, start_col, end_row, end_col, is_white):
+    """檢查兵的移動是否有效"""
+    direction = -1 if is_white else 1  # 白兵向上移動，黑兵向下移動
+    start_pawn_row = 6 if is_white else 1  # 白兵的初始位置是第6行（index 6），黑兵是第1行
+    
+    # 前進一格
+    if start_col == end_col and board[end_row][end_col] == ".":
+        if end_row == start_row + direction:  # 移動一格
+            return True
+        # 初始位置可移動兩格
+        if start_row == start_pawn_row and end_row == start_row + 2 * direction and board[start_row + direction][start_col] == ".":
+            return True
+    
+    # 吃子（斜向移動）
+    if abs(start_col - end_col) == 1 and end_row == start_row + direction and board[end_row][end_col] != ".":
+        if (is_white and board[end_row][end_col].islower()) or (not is_white and board[end_row][end_col].isupper()):
+            return True
+
+    return False
+
+def is_valid_pawn_attack(board, start_row, start_col, end_row, end_col, is_white):
+    direction = -1 if is_white else 1  # 白兵向上移動，黑兵向下移動
+    start_pawn_row = 6 if is_white else 1  # 白兵的初始位置是第6行（index 6），黑兵是第1行
+    
+    # 吃子（斜向移動）
+    if abs(start_col - end_col) == 1 and end_row == start_row + direction and board[end_row][end_col] != ".":
+        if (is_white and board[end_row][end_col].islower()) or (not is_white and board[end_row][end_col].isupper()):
+            return True
+
+    return False
+
+def is_valid_knight_move(start_row, start_col, end_row, end_col, board, is_white):
+    """檢查騎士的移動是否有效"""
+    row_diff = abs(start_row - end_row)
+    col_diff = abs(start_col - end_col)
+    
+    # 騎士必須是兩格一方向，一格另一方向的 "L" 形移動
+    if (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2):
+        # 如果目標位置是空的或者是對方的棋子，則移動有效
+        target_piece = board[end_row][end_col]
+        if target_piece == "." or (is_white and target_piece.islower()) or (not is_white and target_piece.isupper()):
+            return True
+    return False
+
+def is_valid_bishop_move(start_row, start_col, end_row, end_col, board, is_white):
+    """檢查主教的移動是否有效"""
+    row_diff = abs(start_row - end_row)
+    col_diff = abs(start_col - end_col)
+    
+    # 主教必須沿對角線移動
+    if row_diff == col_diff:
+        # 檢查對角線上是否有其他棋子擋路
+        row_step = 1 if end_row > start_row else -1
+        col_step = 1 if end_col > start_col else -1
+        for i in range(1, row_diff):
+            if board[start_row + i * row_step][start_col + i * col_step] != ".":
+                return False
+        # 檢查目標位置是否是敵方棋子或者是空的
+        target_piece = board[end_row][end_col]
+        if target_piece == "." or (is_white and target_piece.islower()) or (not is_white and target_piece.isupper()):
+            return True
+    return False
+
+def is_valid_rook_move(start_row, start_col, end_row, end_col, board, is_white):
+    """檢查城堡的移動是否有效"""
+    # 檢查是否是水平或垂直移動
+    if start_row == end_row or start_col == end_col:
+        # 檢查移動路徑上是否有其他棋子擋路
+        if start_row == end_row:  # 水平移動
+            step = 1 if end_col > start_col else -1
+            for col in range(start_col + step, end_col, step):
+                if board[start_row][col] != ".":
+                    return False
+        else:  # 垂直移動
+            step = 1 if end_row > start_row else -1
+            for row in range(start_row + step, end_row, step):
+                if board[row][start_col] != ".":
+                    return False
+        # 檢查目標位置是否是敵方棋子或者是空的
+        target_piece = board[end_row][end_col]
+        if target_piece == "." or (is_white and target_piece.islower()) or (not is_white and target_piece.isupper()):
+            return True
+    return False
+
+def is_valid_king_move(start_row, start_col, end_row, end_col, board, is_white):
+    """檢查國王的移動是否有效"""
+    row_diff = abs(start_row - end_row)
+    col_diff = abs(start_col - end_col)
+    
+    # 國王只能移動一格
+    if row_diff <= 1 and col_diff <= 1:
+        #檢查目標位置是否是敵方棋子或者是空的
+        target_piece = board[end_row][end_col]
+        if target_piece == "." or (is_white and target_piece.islower()) or (not is_white and target_piece.isupper()):
+            return True
+    return False
+
+def is_valid_queen_move(start_row, start_col, end_row, end_col, board, is_white):
+    """檢查皇后的移動是否有效"""
+    # 皇后可以像主教或者城堡一樣移動
+    return is_valid_rook_move(start_row, start_col, end_row, end_col, board, is_white) or is_valid_bishop_move(start_row, start_col, end_row, end_col, board, is_white)
+
+#根據玩家的移動指令更新棋盤
+def move_piece(board,start,end):
+    start_row, start_col = position_to_index(start)
+    end_row, end_col = position_to_index(end)
+    piece = board[start_row][start_col]
+
+    # 檢查開始位置是否有棋子
+    if piece  == ".":
+        print("無法移動，起始位置無棋子")
+        return False
+    
+    # 檢查棋子是白色還是黑色
+    is_white = piece.isupper()
+
+     # 根據棋子的類型檢查移動規則
+    if piece.lower() == 'p':  # 兵
+        if not is_valid_pawn_move(board, start_row, start_col, end_row, end_col, is_white):
+            print("無效的兵移動")
+            return False
+    elif piece.lower() == 'n':  # 騎士
+        if not is_valid_knight_move(start_row, start_col, end_row, end_col, board, is_white):
+            print("無效的騎士移動")
+            return False
+    elif piece.lower() == 'b':  # 主教
+        if not is_valid_bishop_move(start_row, start_col, end_row, end_col, board, is_white):
+            print("無效的主教移動")
+            return False
+    elif piece.lower() == 'r':  # 城堡
+        if not is_valid_rook_move(start_row, start_col, end_row, end_col, board, is_white):
+            print("無效的城堡移動")
+            return False
+    elif piece.lower() == 'q':  # 皇后
+        if not is_valid_queen_move(start_row, start_col, end_row, end_col, board, is_white):
+            print("無效的皇后移動")
+            return False
+    elif piece.lower() == 'k':  # 國王
+        if not is_valid_king_move(start_row, start_col, end_row, end_col, board, is_white):
+            print("無效的國王移動")
+            return False
+
+    
+    # 移動棋子
+    board[end_row][end_col] = board[start_row][start_col]
+    board[start_row][start_col] = "."
+    return True
+
+    #檢查是否是白色棋子
+def is_white_piece(piece):
+    return piece.isupper()
+    #檢查是否是黑色棋子
+def is_black_piece(piece):
+    return piece.islower()
+
+
+def find_king(board, is_white):
+    """查找國王的位置"""
+    king = 'K' if is_white else 'k'
+    for row in range(8):
+        for col in range(8):
+            if board[row][col] == king:
+                return row, col
+    return None
+
+def is_in_check(board, is_white):
+    """檢查國王是否處於將軍狀態"""
+    king_row, king_col = find_king(board, is_white)
+    if king_row is None:
+        return False  # 找不到國王，表示遊戲已結束
+
+    # 檢查所有敵方棋子是否能威脅到國王
+    for row in range(8):
+        for col in range(8):
+            piece = board[row][col]
+            if (is_white and is_black_piece(piece)) or (not is_white and is_white_piece(piece)):
+                if can_attack_king(board, (row, col), (king_row, king_col),is_white_piece(piece)):
+                    return True
+    return False
+
+def can_attack_king(board, start_pos, king_pos,is_white):
+    """檢查某個棋子是否能攻擊國王"""
+    start_row, start_col = start_pos
+    end_row, end_col = king_pos
+    piece = board[start_row][start_col]
+
+     # 根據棋子的類型檢查移動規則
+    if piece.lower() == 'p':  # 兵的特殊攻擊邏輯
+        return is_valid_pawn_attack(board, start_row, start_col, end_row, end_col, is_white)
+    elif piece.lower() == 'r':  
+        return is_valid_rook_move(start_row, start_col, end_row, end_col, board, is_white)
+    elif piece.lower() == 'n':  
+        return is_valid_knight_move(start_row, start_col, end_row, end_col, board, is_white)
+    elif piece.lower() == 'b':  
+        return is_valid_bishop_move(start_row, start_col, end_row, end_col, board, is_white)
+    elif piece.lower() == 'q':  # 皇后的攻擊邏輯
+        return is_valid_queen_move(start_row, start_col, end_row, end_col, board, is_white)
+    elif piece.lower() == 'k':  # 國王的攻擊邏輯
+        return is_valid_king_move(start_row, start_col, end_row, end_col, board, is_white)
+    
+    return False
+
+
+def play_game():
+    """主遊戲循環"""
+    board = create_board()
+    white_turn = True
+
+    while True:
+        print_board(board)
+        if white_turn:
+            print("白方輪到你了，請輸入移動 (如 e2 e4):")
+        else:
+            print("黑方輪到你了，請輸入移動 (如 e7 e5):")
+
+        
+
+        move = input("輸入移動：")
+        start, end = move.split()
+
+        start_row, start_col = position_to_index(start)
+        piece = board[start_row][start_col]
+
+        if white_turn and not is_white_piece(piece):
+            print("無法移動，這不是白方的棋子。")
+            continue
+        if not white_turn and not is_black_piece(piece):
+            print("無法移動，這不是黑方的棋子。")
+            continue
+
+        if move_piece(board, start, end):
+            white_turn = not white_turn
+        else:
+            print("無效的移動，請再試一次。")
+
+        if not find_king(board, white_turn):
+            print("黑方獲勝" if white_turn else "白方獲勝")
+            break
+        if is_in_check(board,white_turn):
+            print("將軍！")
+        
+
+play_game()
+
+
